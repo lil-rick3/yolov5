@@ -1,4 +1,4 @@
-# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
+# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
 """
 Run YOLOv5 detection inference on images, videos, directories, globs, YouTube, webcam, streams, etc.
 
@@ -96,7 +96,9 @@ def run(
     # Load model
     device = select_device(device)
     model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
-    stride, names, pt = model.stride, model.names, model.pt
+    #stride, names, pt = model.stride, model.names, model.pt
+    stride, pt = model.stride, model.pt
+    names = ["r", "b", "g", "y"]
     imgsz = check_img_size(imgsz, s=stride)  # check image size
 
     # Dataloader
@@ -160,9 +162,12 @@ def run(
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                 # Write results
+                lightArr = []
                 for *xyxy, conf, cls in reversed(det):
+                    
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+                       
                         line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
                         with open(f'{txt_path}.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
@@ -171,8 +176,13 @@ def run(
                         c = int(cls)  # integer class
                         label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
                         annotator.box_label(xyxy, label, color=colors(c, True))
+                        """the good stuff"""
+                        lightArr.append((xyxyToCoord(str(xyxy)),c))
+
+                       
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+                print(lightArr)
 
             # Stream results
             im0 = annotator.result()
@@ -249,6 +259,19 @@ def parse_opt():
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     print_args(vars(opt))
     return opt
+
+def xyxyToCoord(inputStr):
+    """takes in a tensor xyxy object, and outputs the center of box"""
+    
+    subStrings = inputStr.split("(")
+    xyxyArr = []
+    for i in range(1,5):
+        number = int(subStrings[i].split(".")[0])
+        xyxyArr.append(number)
+    x = (xyxyArr[0] + xyxyArr[2])/2
+    y = (xyxyArr[1] + xyxyArr[3])/2
+   
+    return (x,y)
 
 
 def main(opt):
